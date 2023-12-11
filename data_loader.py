@@ -14,7 +14,8 @@ class ImageFolder(data.Dataset):
 		self.root = root
 		
 		# GT : Ground Truth
-		self.GT_paths = root[:-1]+'_GT/'
+		self.GT_paths = root[:-5]+'mask/'
+        #to make the path change from '../train/image' to ../train/mask/'
 		self.image_paths = list(map(lambda x: os.path.join(root, x), os.listdir(root)))
 		self.image_size = image_size
 		self.mode = mode
@@ -25,18 +26,24 @@ class ImageFolder(data.Dataset):
 	def __getitem__(self, index):
 		"""Reads an image from a file and preprocesses it and returns."""
 		image_path = self.image_paths[index]
-		filename = image_path.split('_')[-1][:-len(".jpg")]
-		GT_path = self.GT_paths + 'ISIC_' + filename + '_segmentation.png'
+		filename = image_path.split('/')[-1][:-len(".jpg")]
+		GT_path = self.GT_paths+ filename + '.png'
+        # print(GT_path)
 
 		image = Image.open(image_path)
 		GT = Image.open(GT_path)
+        
+        GT = GT.convert('L')
 
 		aspect_ratio = image.size[1]/image.size[0]
 
 		Transform = []
-
-		ResizeRange = random.randint(300,320)
-		Transform.append(T.Resize((int(ResizeRange*aspect_ratio),ResizeRange)))
+        # Transform.append(T.Resize(720, interpolation=T.InterpolationMode.BILNEAR))
+        
+        # Transform.append(T.CenterCrop((720,720)))
+    
+		# ResizeRange = random.randint(300,320)
+		# Transform.append(T.Resize((int(ResizeRange*aspect_ratio),ResizeRange)))
 		p_transform = random.random()
 
 		if (self.mode == 'train') and p_transform <= self.augmentation_prob:
@@ -83,6 +90,7 @@ class ImageFolder(data.Dataset):
 		Transform = T.Compose(Transform)
 		
 		image = Transform(image)
+        # print("Transformed image size:", image.size)
 		GT = Transform(GT)
 
 		Norm_ = T.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))
